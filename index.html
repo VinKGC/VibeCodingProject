@@ -664,35 +664,18 @@
         let selectedPriority = 'high';
         let currentFilter = 'all';
 
-        async function fetchTasks() {
-            try {
-                const res = await fetch('/api/tasks');
-                tasks = await res.json();
-                renderTasks();
-            } catch (error) {
-                console.error('Error fetching tasks', error);
+        function loadTasks() {
+            const savedTasks = localStorage.getItem('vibecoding_tasks');
+            if (savedTasks) {
+                tasks = JSON.parse(savedTasks);
+            } else {
+                tasks = [];
             }
+            renderTasks();
         }
 
-        async function saveTaskToAPI(task, method = 'POST', id = '') {
-            try {
-                const res = await fetch(`/api/tasks/${id}`, {
-                    method: method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(task)
-                });
-                return await res.json();
-            } catch (error) {
-                console.error('Error saving task', error);
-            }
-        }
-
-        async function deleteTaskFromAPI(id) {
-            try {
-                await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
-            } catch (error) {
-                console.error('Error deleting task', error);
-            }
+        function saveTasksToLocalStorage() {
+            localStorage.setItem('vibecoding_tasks', JSON.stringify(tasks));
         }
 
         function setFilter(filter) {
@@ -734,18 +717,16 @@
                 
                 const circle = document.createElement('div');
                 circle.className = `task-circle priority-${task.priority}`;
-                circle.onclick = async (e) => {
+                circle.onclick = (e) => {
                     e.stopPropagation();
-                    const updatedTask = { ...task, completed: !task.completed };
-                    task.completed = updatedTask.completed;
+                    task.completed = !task.completed;
+                    saveTasksToLocalStorage();
                     renderTasks();
-                    await saveTaskToAPI(updatedTask, 'PUT', task.id);
                 };
 
                 const content = document.createElement('div');
                 content.className = 'task-content';
-                content.innerHTML = `<div class="task-title">${task.title.replace(/
-/g, '<br>')}</div>`;
+                content.innerHTML = `<div class="task-title">${task.title.replace(/\n/g, '<br>')}</div>`;
                 
                 pill.onclick = () => openTaskDetails(task.id);
 
@@ -821,7 +802,7 @@
             showScreen('screen-add');
         }
 
-        async function saveTask() {
+        function saveTask() {
             const nameInput = document.getElementById('task-name');
             const descInput = document.getElementById('task-desc'); 
             const dateInput = document.getElementById('task-date');
@@ -837,16 +818,16 @@
                 };
 
                 if (currentEditingId) {
-                    const task = tasks.find(t => t.id === currentEditingId);
-                    if (task) {
-                        Object.assign(task, taskData);
-                        await saveTaskToAPI(task, 'PUT', currentEditingId);
+                    const taskIndex = tasks.findIndex(t => t.id === currentEditingId);
+                    if (taskIndex !== -1) {
+                        tasks[taskIndex] = { ...tasks[taskIndex], ...taskData, id: currentEditingId };
                     }
                 } else {
-                    const savedTask = await saveTaskToAPI(taskData, 'POST');
-                    tasks.push(savedTask);
+                    const newTask = { ...taskData, id: Date.now().toString() };
+                    tasks.push(newTask);
                 }
                 
+                saveTasksToLocalStorage();
                 renderTasks();
                 
                 if (currentEditingId && currentViewingId === currentEditingId) {
@@ -889,16 +870,16 @@
             showScreen('screen-detail');
         }
 
-        async function deleteCurrentTask() {
+        function deleteCurrentTask() {
             if (currentViewingId) {
-                await deleteTaskFromAPI(currentViewingId);
                 tasks = tasks.filter(t => t.id !== currentViewingId);
+                saveTasksToLocalStorage();
                 showScreen('screen-list');
             }
         }
 
         // Init
-        fetchTasks();
+        loadTasks();
     </script>
 </body>
 
