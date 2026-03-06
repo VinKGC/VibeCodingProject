@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earthy To-Do List Demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        body {
+            background-color: #FDFBF7;
+            background-image:
+                radial-gradient(circle at 30% 30%, rgba(228, 166, 153, 0.25) 0%, transparent 40%),
+                radial-gradient(circle at 70% 40%, rgba(239, 195, 126, 0.25) 0%, transparent 40%),
+                radial-gradient(circle at 40% 70%, rgba(162, 175, 146, 0.25) 0%, transparent 40%);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .watch-container {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .watch-band-top {
+            position: absolute;
+            top: -240px;
+            width: 160px;
+            height: 260px;
+            background: linear-gradient(to bottom, #E8E8E8, #F7F7F7);
+            border-radius: 20px 20px 0 0;
+            z-index: -2;
+        }
+
+        .watch-band-bottom {
+            position: absolute;
+            bottom: -240px;
+            width: 160px;
+            height: 260px;
+            background: linear-gradient(to top, #E8E8E8, #F7F7F7);
+            border-radius: 0 0 20px 20px;
+            z-index: -2;
+        }
+
+        .watch-bezel {
+            width: 360px;
+            height: 360px;
+            border-radius: 50%;
+            background: #F7F7F7;
+            box-shadow:
+                0 20px 50px rgba(0, 0, 0, 0.1),
+                inset 0 5px 10px rgba(255, 255, 255, 1),
+                inset 0 -5px 15px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .watch-crown {
+            position: absolute;
+            right: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 50px;
+            background: linear-gradient(to right, #E0E0E0, #FDFDFD);
+            border-radius: 8px;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            z-index: 0;
+        }
+
+        .watch-screen {
+            width: 320px;
+            height: 320px;
+            border-radius: 50%;
+            background-color: #000000;
+            color: #FFFFFF;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px 80px 20px;
+            overflow-y: auto;
+            scrollbar-width: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .screen::-webkit-scrollbar {
+            display: none;
+        }
+
+        .screen.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        /* Search Pill */
+        .search-pill {
+            background-color: #1A1B1E;
+            border-radius: 20px;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            width: 260px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+
+        .search-pill input {
+            background: transparent;
+            border: none;
+            color: #FFFFFF;
+            font-size: 15px;
+            flex-grow: 1;
+            outline: none;
+        }
+
+        .search-pill input::placeholder {
+            color: #9AA0A6;
+        }
+
+        .search-pill .icon {
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Tabs */
+        .tabs-container {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            width: 260px;
+            justify-content: center;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background-color: #1A1B1E;
+            color: #9AA0A6;
+            border: 2px solid transparent;
+            border-radius: 16px;
+            padding: 8px 0;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .tab-btn.active {
+            border-color: #A67B5B;
+            color: #A67B5B;
+        }
+
+        /* General Titles */
+        .title-today {
+            font-size: 17px;
+            font-weight: 500;
+            color: #FFFFFF;
+            margin-bottom: 24px;
+        }
+
+        /* Task Pills */
+        .pill {
+            background-color: #1A1B1E;
+            border-radius: 28px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            width: 260px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            box-sizing: border-box;
+            transition: transform 0.1s;
+        }
+
+        .pill:active {
+            transform: scale(0.97);
+        }
+
+        .pill .task-circle {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid #E27B63;
+            /* Default to High/Earth */
+            margin-right: 14px;
+            flex-shrink: 0;
+            box-sizing: border-box;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        /* Priority colors */
+        .priority-high {
+            border-color: #E27B63 !important;
+        }
+
+        .priority-medium {
+            border-color: #EFC37E !important;
+        }
+
+        .priority-low {
+            border-color: #6BAA75 !important;
+        }
+
+        .pill.completed .task-circle.priority-high {
+            background-color: #E27B63;
+        }
+
+        .pill.completed .task-circle.priority-medium {
+            background-color: #EFC37E;
+        }
+
+        .pill.completed .task-circle.priority-low {
+            background-color: #6BAA75;
+        }
+
+        .pill .task-content {
+            flex-grow: 1;
+            text-align: left;
+            pointer-events: none;
+            /* Let click pass to pill */
+        }
+
+        .pill .task-title {
+            font-size: 17px;
+            font-weight: 500;
+            line-height: 1.3;
+            color: #FFFFFF;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        .pill.completed .task-title {
+            text-decoration: line-through;
+            color: #9AA0A6;
+        }
+
+        .date-footer {
+            font-size: 14px;
+            font-weight: 600;
+            color: #FFFFFF;
+            margin-top: 24px;
+            text-align: center;
+        }
+
+        /* Add/Edit Screen */
+        .screen-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: #FFFFFF;
+            margin-bottom: 18px;
+            margin-top: 0;
+        }
+
+        .input-pill {
+            background-color: #1A1B1E;
+            border-radius: 28px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            width: 260px;
+            margin-bottom: 8px;
+            box-sizing: border-box;
+            transition: transform 0.1s;
+            cursor: pointer;
+        }
+
+        .input-pill:focus-within {
+            border: 1px solid #444;
+        }
+
+        .input-pill .icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 14px;
+            width: 20px;
+        }
+
+        .input-pill .icon svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: #FFFFFF;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .input-pill input,
+        .input-pill textarea {
+            background: transparent;
+            border: none;
+            color: #FFFFFF;
+            font-size: 15px;
+            font-weight: 500;
+            flex-grow: 1;
+            outline: none;
+            width: 100%;
+            font-family: inherit;
+        }
+
+        .input-pill input::placeholder,
+        .input-pill textarea::placeholder {
+            color: #9AA0A6;
+        }
+
+        .input-pill textarea {
+            resize: none;
+            height: 38px;
+            padding-top: 10px;
+        }
+
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            opacity: 0.5;
+            cursor: pointer;
+        }
+
+        /* Priority selector */
+        .select-container {
+            display: flex;
+            gap: 10px;
+            width: 260px;
+            margin-bottom: 8px;
+        }
+
+        .priority-btn {
+            flex: 1;
+            background-color: #1A1B1E;
+            color: #9AA0A6;
+            border: 2px solid transparent;
+            border-radius: 16px;
+            padding: 10px 0;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .priority-btn.active.high {
+            border-color: #E27B63;
+            color: #E27B63;
+        }
+
+        .priority-btn.active.medium {
+            border-color: #EFC37E;
+            color: #EFC37E;
+        }
+
+        .priority-btn.active.low {
+            border-color: #6BAA75;
+            color: #6BAA75;
+        }
+
+        .action-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+            width: 260px;
+            justify-content: center;
+        }
+
+        .btn-fab,
+        .btn-primary,
+        .btn-secondary,
+        .btn-danger {
+            border: none;
+            border-radius: 24px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-fab {
+            background-color: #1A1B1E;
+            color: #FFFFFF;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 24px;
+            margin-top: 20px;
+        }
+
+        .btn-fab:active {
+            transform: scale(0.95);
+        }
+
+        .btn-primary {
+            background-color: #E27B63;
+            color: #000000;
+            padding: 14px 24px;
+            font-size: 15px;
+            flex: 1;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.95);
+        }
+
+        .btn-secondary {
+            background-color: #1A1B1E;
+            color: #FFFFFF;
+            padding: 14px 24px;
+            font-size: 15px;
+            flex: 1;
+        }
+
+        .btn-secondary:active {
+            transform: scale(0.95);
+        }
+
+        .btn-danger {
+            background-color: transparent;
+            border: 1px solid #FF5252;
+            color: #FF5252;
+            padding: 14px 24px;
+            font-size: 15px;
+            flex: 1;
+        }
+
+        .btn-danger:active {
+            transform: scale(0.95);
+            background-color: #FF5252;
+            color: #000;
+        }
+
+        /* Task Details Screen */
+        .detail-card {
+            background-color: #1A1B1E;
+            border-radius: 24px;
+            padding: 24px;
+            width: 260px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .detail-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #FFFFFF;
+            margin-bottom: 12px;
+            text-align: left;
+            width: 100%;
+            word-wrap: break-word;
+        }
+
+        .detail-desc {
+            font-size: 15px;
+            color: #9AA0A6;
+            margin-bottom: 20px;
+            text-align: left;
+            width: 100%;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        .detail-meta {
+            font-size: 14px;
+            color: #FFFFFF;
+            margin-bottom: 8px;
+            text-align: left;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .detail-meta.high {
+            color: #E27B63;
+        }
+
+        .detail-meta.medium {
+            color: #EFC37E;
+        }
+
+        .detail-meta.low {
+            color: #6BAA75;
+        }
+
+        .detail-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            width: 260px;
+            justify-content: center;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="watch-container">
+        <div class="watch-band-top"></div>
+        <div class="watch-band-bottom"></div>
+
+        <div class="watch-bezel">
+            <div class="watch-crown"></div>
+
+            <div class="watch-screen">
+
+                <!-- Screen 1: Task List -->
+                <div id="screen-list" class="screen active">
+                    <div class="search-pill">
+                        <div class="icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9AA0A6"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                        </div>
+                        <input type="text" id="search-input" placeholder="Search tasks..." autocomplete="off"
+                            onkeyup="renderTasks()">
+                    </div>
+
+                    <div class="tabs-container">
+                        <button class="tab-btn active" id="tab-all" onclick="setFilter('all')">All</button>
+                        <button class="tab-btn" id="tab-pending" onclick="setFilter('pending')">Work</button>
+                        <button class="tab-btn" id="tab-overdue" onclick="setFilter('overdue')">Overdue</button>
+                    </div>
+
+                    <div id="task-list-container">
+                        <!-- Tasks injected here -->
+                    </div>
+
+                    <div class="date-footer" id="progress-footer">0/0 Completed</div>
+
+                    <button class="btn-fab" onclick="openAddScreen()" aria-label="Add task">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Screen 2: Add/Edit Task -->
+                <div id="screen-add" class="screen">
+                    <div class="screen-title" id="form-screen-title">Add Task</div>
+
+                    <div class="form-container">
+                        <div class="input-pill" onclick="document.getElementById('task-name').focus()">
+                            <div class="icon">
+                                <svg viewBox="0 0 24 24" stroke="#FFFFFF" fill="none">
+                                    <path d="M12 20h9"></path>
+                                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                                </svg>
+                            </div>
+                            <input type="text" id="task-name" placeholder="Task name" autocomplete="off">
+                        </div>
+
+                        <div class="input-pill" onclick="document.getElementById('task-desc').focus()">
+                            <div class="icon">
+                                <svg viewBox="0 0 24 24" stroke="#FFFFFF" fill="none">
+                                    <line x1="4" y1="6" x2="20" y2="6"></line>
+                                    <line x1="4" y1="12" x2="20" y2="12"></line>
+                                    <line x1="4" y1="18" x2="16" y2="18"></line>
+                                </svg>
+                            </div>
+                            <textarea id="task-desc" placeholder="Description"></textarea>
+                        </div>
+
+                        <div class="select-container">
+                            <button class="priority-btn active high" id="pri-high"
+                                onclick="setPriority('high')">High</button>
+                            <button class="priority-btn medium" id="pri-medium"
+                                onclick="setPriority('medium')">Med</button>
+                            <button class="priority-btn low" id="pri-low" onclick="setPriority('low')">Low</button>
+                        </div>
+
+                        <div class="input-pill" onclick="document.getElementById('task-date').focus()">
+                            <div class="icon">
+                                <svg viewBox="0 0 24 24" stroke="#FFFFFF" fill="none">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                            </div>
+                            <input type="date" id="task-date">
+                        </div>
+
+                        <div class="action-container">
+                            <button class="btn-secondary" onclick="showScreen('screen-list')">Cancel</button>
+                            <button class="btn-primary" onclick="saveTask()">Save</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Screen 3: Task Details -->
+                <div id="screen-detail" class="screen">
+                    <div class="detail-card">
+                        <div class="detail-title" id="detail-title">Task Title</div>
+                        <div class="detail-desc" id="detail-desc">Description goes here</div>
+
+                        <div class="detail-meta" id="detail-priority">
+                            <svg class="detail-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                            <span id="detail-priority-text">High Priority</span>
+                        </div>
+                        <div class="detail-meta" style="color: #9AA0A6;">
+                            <svg class="detail-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            <span id="detail-date-text">No Date</span>
+                        </div>
+                    </div>
+
+                    <div class="detail-actions">
+                        <button class="btn-secondary" onclick="showScreen('screen-list')">Back</button>
+                        <button class="btn-primary" onclick="openEditScreen()">Edit</button>
+                        <button class="btn-danger" onclick="deleteCurrentTask()">Del</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+        <script>
+        let tasks = [];
+        let currentEditingId = null;
+        let currentViewingId = null;
+        let selectedPriority = 'high';
+        let currentFilter = 'all';
+
+        async function fetchTasks() {
+            try {
+                const res = await fetch('/api/tasks');
+                tasks = await res.json();
+                renderTasks();
+            } catch (error) {
+                console.error('Error fetching tasks', error);
+            }
+        }
+
+        async function saveTaskToAPI(task, method = 'POST', id = '') {
+            try {
+                const res = await fetch(`/api/tasks/${id}`, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(task)
+                });
+                return await res.json();
+            } catch (error) {
+                console.error('Error saving task', error);
+            }
+        }
+
+        async function deleteTaskFromAPI(id) {
+            try {
+                await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+            } catch (error) {
+                console.error('Error deleting task', error);
+            }
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab-${filter}`).classList.add('active');
+            renderTasks();
+        }
+
+        function isOverdue(dueDateStr) {
+            if (!dueDateStr) return false;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const dueDate = new Date(dueDateStr);
+            dueDate.setMinutes(dueDate.getMinutes() + dueDate.getTimezoneOffset());
+            return dueDate < today;
+        }
+
+        function renderTasks() {
+            const container = document.getElementById('task-list-container');
+            const searchInput = document.getElementById('search-input').value.toLowerCase();
+            container.innerHTML = '';
+
+            let filteredTasks = tasks.filter(t =>
+                t.title.toLowerCase().includes(searchInput) ||
+                (t.description && t.description.toLowerCase().includes(searchInput))
+            );
+
+            if (currentFilter === 'pending') {
+                filteredTasks = filteredTasks.filter(t => !t.completed);
+            } else if (currentFilter === 'overdue') {
+                filteredTasks = filteredTasks.filter(t => !t.completed && isOverdue(t.dueDate));
+            }
+
+            filteredTasks.forEach((task) => {
+                const pill = document.createElement('div');
+                pill.className = `pill ${task.completed ? 'completed' : ''}`;
+                pill.dataset.id = task.id;
+                
+                const circle = document.createElement('div');
+                circle.className = `task-circle priority-${task.priority}`;
+                circle.onclick = async (e) => {
+                    e.stopPropagation();
+                    const updatedTask = { ...task, completed: !task.completed };
+                    task.completed = updatedTask.completed;
+                    renderTasks();
+                    await saveTaskToAPI(updatedTask, 'PUT', task.id);
+                };
+
+                const content = document.createElement('div');
+                content.className = 'task-content';
+                content.innerHTML = `<div class="task-title">${task.title.replace(/
+/g, '<br>')}</div>`;
+                
+                pill.onclick = () => openTaskDetails(task.id);
+
+                pill.appendChild(circle);
+                pill.appendChild(content);
+                container.appendChild(pill);
+            });
+
+            const completedCount = tasks.filter(t => t.completed).length;
+            const progressStr = tasks.length > 0 ? `${completedCount}/${tasks.length} Completed` : 'No tasks';
+            document.getElementById('progress-footer').innerText = progressStr;
+
+            new Sortable(container, {
+                animation: 150,
+                delay: 100,
+                delayOnTouchOnly: true,
+                onEnd: function (evt) {
+                    /* Tasks order logic backend can be added here if needed */
+                }
+            });
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => {
+                s.style.display = 'none';
+                s.classList.remove('active');
+                s.style.opacity = '0';
+            });
+            
+            const target = document.getElementById(screenId);
+            target.style.display = 'flex';
+            
+            setTimeout(() => {
+                target.classList.add('active');
+                target.style.opacity = '1';
+            }, 10);
+            
+            target.scrollTop = 0;
+            
+            if(screenId === 'screen-list') {
+                document.getElementById('search-input').value = '';
+                renderTasks();
+            }
+        }
+
+        function setPriority(pri) {
+            selectedPriority = pri;
+            document.querySelectorAll('.priority-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`pri-${pri}`).classList.add('active');
+        }
+
+        function openAddScreen() {
+            currentEditingId = null;
+            document.getElementById('form-screen-title').innerText = 'Add Task';
+            document.getElementById('task-name').value = '';
+            document.getElementById('task-desc').value = '';
+            document.getElementById('task-date').value = '';
+            setPriority('high');
+            showScreen('screen-add');
+        }
+
+        function openEditScreen() {
+            const task = tasks.find(t => t.id === currentViewingId);
+            if (!task) return;
+            
+            currentEditingId = task.id;
+            document.getElementById('form-screen-title').innerText = 'Edit Task';
+            document.getElementById('task-name').value = task.title;
+            document.getElementById('task-desc').value = task.description || '';
+            document.getElementById('task-date').value = task.dueDate || '';
+            setPriority(task.priority || 'high');
+            
+            showScreen('screen-add');
+        }
+
+        async function saveTask() {
+            const nameInput = document.getElementById('task-name');
+            const descInput = document.getElementById('task-desc'); 
+            const dateInput = document.getElementById('task-date');
+            
+            const titleVal = nameInput.value.trim();
+            if (titleVal) {
+                const taskData = {
+                    title: titleVal,
+                    description: descInput.value.trim(),
+                    dueDate: dateInput.value,
+                    priority: selectedPriority,
+                    completed: false
+                };
+
+                if (currentEditingId) {
+                    const task = tasks.find(t => t.id === currentEditingId);
+                    if (task) {
+                        Object.assign(task, taskData);
+                        await saveTaskToAPI(task, 'PUT', currentEditingId);
+                    }
+                } else {
+                    const savedTask = await saveTaskToAPI(taskData, 'POST');
+                    tasks.push(savedTask);
+                }
+                
+                renderTasks();
+                
+                if (currentEditingId && currentViewingId === currentEditingId) {
+                    openTaskDetails(currentEditingId);
+                } else {
+                    showScreen('screen-list');
+                    setTimeout(() => {
+                        const listScreen = document.getElementById('screen-list');
+                        listScreen.scrollTop = listScreen.scrollHeight;
+                    }, 100);
+                }
+            }
+        }
+
+        function openTaskDetails(id) {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+            
+            currentViewingId = id;
+            document.getElementById('detail-title').innerText = task.title;
+            document.getElementById('detail-desc').innerText = task.description || 'No description provided';
+            
+            const priBadge = document.getElementById('detail-priority');
+            const priText = document.getElementById('detail-priority-text');
+            priBadge.className = `detail-meta ${task.priority}`;
+            priText.innerText = task.priority.charAt(0).toUpperCase() + task.priority.slice(1) + ' Priority';
+            
+            let dateStr = "No Due Date";
+            if (task.dueDate) {
+                const dateParts = task.dueDate.split('-');
+                if(dateParts.length === 3) {
+                    const d = new Date(dateParts[0], dateParts[1]-1, dateParts[2]);
+                    dateStr = d.toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: 'numeric'});
+                } else {
+                    dateStr = task.dueDate;
+                }
+            }
+            document.getElementById('detail-date-text').innerText = dateStr;
+            
+            showScreen('screen-detail');
+        }
+
+        async function deleteCurrentTask() {
+            if (currentViewingId) {
+                await deleteTaskFromAPI(currentViewingId);
+                tasks = tasks.filter(t => t.id !== currentViewingId);
+                showScreen('screen-list');
+            }
+        }
+
+        // Init
+        fetchTasks();
+    </script>
+</body>
+
+</html>
